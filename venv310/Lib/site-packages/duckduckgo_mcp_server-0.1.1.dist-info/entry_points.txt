@@ -1,0 +1,2 @@
+[console_scripts]
+duckduckgo-mcp-server = duckduckgo_mcp_server.server:main
