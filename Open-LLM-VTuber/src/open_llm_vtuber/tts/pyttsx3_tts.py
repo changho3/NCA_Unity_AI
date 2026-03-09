@@ -18,7 +18,7 @@ class TTSEngine(TTSInterface):
     def __init__(self):
         self.engine = pyttsx3.init()
         self.temp_audio_file = "temp"
-        self.file_extension = "aiff"
+        self.file_extension = "wav"
         self.new_audio_dir = "cache"
         self.lock = threading.Lock()
 

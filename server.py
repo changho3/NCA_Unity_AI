@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from contextlib import asynccontextmanager
 from google import genai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -15,7 +16,7 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-app = FastAPI(title="Command Classification API")
+# app은 lifespan 선언 후 초기화합니다.
 
 # 코사인 유사도 계산 함수
 def cosine_similarity(a, b):
@@ -71,8 +72,8 @@ def get_embedding(text: str) -> list[float]:
 # 전역 변수로 기준 벡터 캐싱
 CATEGORY_EMBEDDINGS = {}
 
-@app.on_event("startup")
-def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     print("서버 시작 중: 기준 데이터 임베딩 생성...")
     # 각 카테고리의 대표 문장들을 임베딩하여 평균 벡터(또는 각 벡터 배열) 저장
     for category_name, sentences in categories.items():
@@ -84,6 +85,9 @@ def startup_event():
         avg_embedding = np.mean(embeddings, axis=0)
         CATEGORY_EMBEDDINGS[category_name] = avg_embedding
     print("시스템 준비 완료!")
+    yield
+
+app = FastAPI(title="Command Classification API", lifespan=lifespan)
 
 class ClassificationRequest(BaseModel):
     text: str
@@ -136,4 +140,7 @@ def classify_text(req: ClassificationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"임베딩/분류 중 오류 발생: {str(e)}")
 
-# uvicorn server:app --reload
+# `python server.py` 로 실행할 수 있게 uvicorn 코드 추가
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
